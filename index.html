@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Aether Gallery | Local Image Gallery</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #0a0c10;
+      color: #eef2ff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Loading spinner */
+    .loader {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(95, 139, 224, 0.2);
+      border-top: 3px solid #5f8be0;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      z-index: 300;
+    }
+
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* -------------------- PASSWORD SCREEN -------------------- */
+    .password-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 30% 10%, #11151c, #030507);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      backdrop-filter: blur(2px);
+      transition: opacity 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    }
+
+    .password-card {
+      background: rgba(18, 22, 28, 0.85);
+      backdrop-filter: blur(12px);
+      border-radius: 2rem;
+      padding: 2rem 2rem 2.5rem;
+      width: 90%;
+      max-width: 380px;
+      text-align: center;
+      box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(75, 130, 200, 0.2);
+      border: 1px solid rgba(100, 150, 220, 0.3);
+      transition: transform 0.2s;
+    }
+
+    .password-card h2 {
+      font-weight: 500;
+      font-size: 1.9rem;
+      letter-spacing: -0.3px;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #e0eaff, #a0c0ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .password-card p {
+      color: #9aaec0;
+      margin-bottom: 1.8rem;
+      font-size: 0.9rem;
+    }
+
+    .password-input {
+      width: 100%;
+      padding: 0.9rem 1.2rem;
+      background: #11161f;
+      border: 1px solid #2a3342;
+      border-radius: 2rem;
+      font-size: 1rem;
+      color: #f0f3fa;
+      outline: none;
+      transition: all 0.2s;
+      margin-bottom: 1.5rem;
+    }
+
+    .password-input:focus {
+      border-color: #5f8be0;
+      box-shadow: 0 0 0 3px rgba(95, 139, 224, 0.3);
+    }
+
+    .unlock-btn {
+      background: linear-gradient(105deg, #2c3e6e, #1f2b48);
+      border: none;
+      width: 100%;
+      padding: 0.85rem;
+      border-radius: 2rem;
+      font-weight: 600;
+      font-size: 1rem;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(90, 140, 220, 0.4);
+    }
+
+    .unlock-btn:hover {
+      background: linear-gradient(105deg, #3f5a8a, #2a385a);
+      transform: scale(0.98);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      border-color: #6d94e0;
+    }
+
+    .error-msg {
+      color: #ff9494;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      min-height: 2rem;
+    }
+
+    /* -------------------- MAIN GALLERY APP WITH FIXED HEADER & FOOTER -------------------- */
+    .gallery-app {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+      width: 100%;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    /* Fixed Header - Mobile App Style */
+    .app-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(10, 12, 16, 0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(95, 139, 224, 0.2);
+      padding: 1rem 1.5rem;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .header-content {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .header-title h1 {
+      font-weight: 500;
+      font-size: 1.5rem;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #cfdef5, #95b4f0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .header-title p {
+      color: #7e8c9e;
+      font-size: 0.75rem;
+      margin-top: 0.2rem;
+    }
+
+    .stats-badge {
+      background: rgba(95, 139, 224, 0.15);
+      padding: 0.4rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      color: #95b4f0;
+      border: 1px solid rgba(95, 139, 224, 0.3);
+    }
+
+    /* Scrollable Content Area */
+    .gallery-content {
+      flex: 1;
+      overflow-y: auto;
+      margin-top: 85px;
+      margin-bottom: 65px;
+      padding: 1rem 1.5rem;
+    }
+
+    /* Larger Image Grid */
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.8rem;
+      justify-items: center;
+      align-items: stretch;
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    .grid-item {
+      width: 100%;
+      background: #11171f;
+      border-radius: 1.2rem;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      cursor: pointer;
+      box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.5);
+      border: 1px solid #20262e;
+    }
+
+    .grid-item:hover {
+      transform: translateY(-6px);
+      border-color: #3e5570;
+      box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.6);
+    }
+
+    .grid-item img {
+      width: 100%;
+      aspect-ratio: 16 / 11;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.4s ease;
+    }
+
+    .grid-item:hover img {
+      transform: scale(1.03);
+    }
+
+    /* Fixed Footer - Mobile App Style */
+    .app-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(10, 12, 16, 0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(95, 139, 224, 0.2);
+      padding: 0.75rem 1.5rem;
+      z-index: 100;
+    }
+
+    .footer-content {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+    }
+
+    .footer-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.75rem;
+      color: #7e8c9e;
+    }
+
+    .footer-info span {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .footer-love {
+      font-size: 0.75rem;
+      color: #5f8be0;
+    }
+
+    /* Error message container */
+    .error-message-container {
+      text-align: center;
+      padding: 3rem;
+      color: #ff9494;
+      background: rgba(255, 68, 68, 0.1);
+      border-radius: 1rem;
+      margin: 2rem auto;
+    }
+
+    /* -------------------- FULLSCREEN MODAL -------------------- */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(16px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      visibility: hidden;
+      opacity: 0;
+      transition: visibility 0.2s, opacity 0.25s ease;
+    }
+
+    .modal.active {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .modal-content {
+      position: relative;
+      max-width: 95vw;
+      max-height: 90vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-image {
+      max-width: 95vw;
+      max-height: 85vh;
+      object-fit: contain;
+      border-radius: 1rem;
+      box-shadow: 0 20px 35px rgba(0, 0, 0, 0.6);
+      transition: transform 0.2s;
+      animation: fadeScale 0.2s ease;
+    }
+
+    @keyframes fadeScale {
+      from {
+        opacity: 0;
+        transform: scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* navigation buttons */
+    .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(20, 25, 35, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: white;
+      font-size: 2.4rem;
+      font-weight: 300;
+      user-select: none;
+    }
+
+    .nav-btn:hover {
+      background: #3a5a8a;
+      transform: translateY(-50%) scale(1.05);
+      border-color: #b0ccff;
+    }
+
+    .prev-btn {
+      left: 24px;
+    }
+
+    .next-btn {
+      right: 24px;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 28px;
+      right: 32px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      font-weight: 300;
+      cursor: pointer;
+      color: #f0f3ff;
+      transition: 0.2s;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .close-modal:hover {
+      background: #c44f4f;
+      transform: scale(0.96);
+      border-color: #ffbaba;
+    }
+
+    /* Custom scrollbar */
+    .gallery-content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .gallery-content::-webkit-scrollbar-track {
+      background: #11161f;
+    }
+
+    .gallery-content::-webkit-scrollbar-thumb {
+      background: #2a3c60;
+      border-radius: 10px;
+    }
+
+    .gallery-content::-webkit-scrollbar-thumb:hover {
+      background: #5f8be0;
+    }
+
+    /* mobile responsiveness */
+    @media (max-width: 768px) {
+      .image-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.2rem;
+      }
+      
+      .gallery-content {
+        padding: 1rem;
+        margin-top: 80px;
+        margin-bottom: 70px;
+      }
+      
+      .app-header {
+        padding: 0.75rem 1rem;
+      }
+      
+      .header-title h1 {
+        font-size: 1.2rem;
+      }
+      
+      .app-footer {
+        padding: 0.6rem 1rem;
+      }
+      
+      .footer-info {
+        font-size: 0.7rem;
+      }
+      
+      .nav-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 2rem;
+      }
+      
+      .prev-btn {
+        left: 12px;
+      }
+      
+      .next-btn {
+        right: 12px;
+      }
+      
+      .close-modal {
+        top: 16px;
+        right: 16px;
+        width: 42px;
+        height: 42px;
+        font-size: 1.5rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .image-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      
+      .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .footer-content {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading Spinner -->
+<div id="loader" class="loader" style="display: none;"></div>
+
+<!-- PASSWORD SCREEN -->
+<div class="password-screen" id="passwordScreen">
+  <div class="password-card">
+    <h2>🔐 vault gallery</h2>
+    <p>enter access key to explore</p>
+    <input type="password" id="passwordInput" class="password-input" placeholder="password" autocomplete="off">
+    <button id="unlockButton" class="unlock-btn">unlock gallery →</button>
+    <div id="errorMsg" class="error-msg"></div>
+  </div>
+</div>
+
+<!-- MAIN GALLERY APP with Fixed Header & Footer -->
+<div class="gallery-app" id="galleryApp">
+  <!-- Fixed Header -->
+  <header class="app-header">
+    <div class="header-content">
+      <div class="header-title">
+        <h1>✦ local gallery</h1>
+        <p>from your images folder</p>
+      </div>
+      <div class="stats-badge" id="imageCount">
+        loading...
+      </div>
+    </div>
+  </header>
+
+  <!-- Scrollable Content with Larger Images -->
+  <main class="gallery-content">
+    <div class="image-grid" id="imageGrid"></div>
+  </main>
+
+  <!-- Fixed Footer -->
+  <footer class="app-footer">
+    <div class="footer-content">
+      <div class="footer-info">
+        <span>📸</span>
+        <span>fullscreen viewer</span>
+        <span>•</span>
+        <span>← → navigate</span>
+        <span>•</span>
+        <span>ESC close</span>
+      </div>
+      <div class="footer-love">
+        ✦ local image gallery
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- MODAL STRUCTURE -->
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <img class="modal-image" id="modalImage" alt="fullscreen view">
+    <button class="nav-btn prev-btn" id="prevBtn">‹</button>
+    <button class="nav-btn next-btn" id="nextBtn">›</button>
+    <button class="close-modal" id="closeModalBtn">✕</button>
+  </div>
+</div>
+
+<script>
+  // Global variables
+  let galleryImages = [];
+  let currentModalIndex = 0;
+  let isImagesLoaded = false;
+
+  // DOM elements
+  const passwordScreenDiv = document.getElementById('passwordScreen');
+  const galleryAppDiv = document.getElementById('galleryApp');
+  const passwordInput = document.getElementById('passwordInput');
+  const unlockBtn = document.getElementById('unlockButton');
+  const errorMsgSpan = document.getElementById('errorMsg');
+  const imageGridContainer = document.getElementById('imageGrid');
+  const modal = document.getElementById('modal');
+  const modalImage = document.getElementById('modalImage');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+  const loader = document.getElementById('loader');
+  const imageCountSpan = document.getElementById('imageCount');
+
+  // Correct password
+  const CORRECT_PASSWORD = "iram";
+
+  // Function to fetch images from gallery.json
+  async function fetchGalleryImages() {
+    try {
+      showLoader(true);
+      
+      // Fetch the gallery.json file
+      const response = await fetch('gallery.json');
+      
+      if (!response.ok) {
+        throw new Error(`JSON file not found! Status: ${response.status}. Make sure gallery.json exists.`);
+      }
+      
+      const data = await response.json();
+      
+      // Check if images array exists in JSON
+      let imagesList = [];
+      if (data && Array.isArray(data.images)) {
+        imagesList = data.images;
+      } else if (Array.isArray(data)) {
+        imagesList = data;
+      } else {
+        throw new Error('Invalid JSON structure. Expected { "images": [...] } or array');
+      }
+      
+      // Process each image - they should only contain filename and optional alt text
+      galleryImages = [];
+      for (let i = 0; i < imagesList.length; i++) {
+        const item = imagesList[i];
+        
+        // Get filename (can be string or object with filename property)
+        let filename = '';
+        let altText = '';
+        
+        if (typeof item === 'string') {
+          filename = item;
+          altText = `Image ${i + 1}`;
+        } else if (typeof item === 'object' && item.filename) {
+          filename = item.filename;
+          altText = item.alt || `Image ${i + 1}`;
+        } else if (typeof item === 'object' && item.src) {
+          // If someone uses src directly, extract filename
+          filename = item.src;
+          altText = item.alt || `Image ${i + 1}`;
+        } else {
+          console.warn('Invalid image entry:', item);
+          continue;
+        }
+        
+        // Construct the local image path (images folder)
+        const imagePath = `images/${filename}`;
+        
+        galleryImages.push({
+          src: imagePath,
+          alt: altText,
+          filename: filename
+        });
+      }
+      
+      if (galleryImages.length === 0) {
+        throw new Error('No valid images found in gallery.json');
+      }
+      
+      // Update image count in header
+      imageCountSpan.textContent = `📷 ${galleryImages.length} images`;
+      
+      console.log(`✅ Successfully loaded ${galleryImages.length} images from gallery.json`);
+      console.log('Images:', galleryImages);
+      
+      isImagesLoaded = true;
+      showLoader(false);
+      return true;
+      
+    } catch (error) {
+      console.error('Error fetching gallery.json:', error);
+      showLoader(false);
+      showErrorOnScreen(`❌ ${error.message}. Please check that gallery.json exists in the same folder.`);
+      imageCountSpan.textContent = `⚠️ error`;
+      return false;
+    }
+  }
+
+  // Function to show loader
+  function showLoader(show) {
+    if (show) {
+      loader.style.display = 'block';
+    } else {
+      loader.style.display = 'none';
+    }
+  }
+
+  // Function to show error message in password screen
+  function showErrorOnScreen(message) {
+    errorMsgSpan.textContent = `⚠️ ${message}`;
+    errorMsgSpan.style.color = '#ff9494';
+  }
+
+  // Function to check if an image exists and load it with fallback
+  function loadImageWithCheck(imgElement, imagePath, altText) {
+    imgElement.src = imagePath;
+    imgElement.alt = altText;
+    
+    // If image fails to load, show error placeholder
+    imgElement.onerror = function() {
+      this.onerror = null;
+      this.src = 'https://picsum.photos/id/111/1200/800';
+      this.alt = `⚠️ Image not found: ${imagePath}`;
+      console.warn(`Image not found: ${imagePath}`);
+    };
+  }
+
+  // Function to render gallery grid from local images
+  function renderGallery() {
+    if (!imageGridContainer) return;
+    imageGridContainer.innerHTML = '';
+    
+    if (galleryImages.length === 0) {
+      imageGridContainer.innerHTML = '<div class="error-message-container">✨ No images found in gallery.json. Please add image filenames to the JSON file.</div>';
+      return;
+    }
+    
+    galleryImages.forEach((img, idx) => {
+      const gridItem = document.createElement('div');
+      gridItem.className = 'grid-item';
+      
+      // Create image element
+      const imgElement = document.createElement('img');
+      loadImageWithCheck(imgElement, img.src, img.alt);
+      imgElement.loading = 'lazy';
+      
+      gridItem.appendChild(imgElement);
+      
+      // Click to open fullscreen modal viewer
+      gridItem.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openModal(idx);
+      });
+      
+      imageGridContainer.appendChild(gridItem);
+    });
+  }
+
+  // ---------- MODAL FUNCTIONS ----------
+  function openModal(startIndex) {
+    if (!galleryImages.length) return;
+    currentModalIndex = (startIndex + galleryImages.length) % galleryImages.length;
+    updateModalImage();
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function updateModalImage() {
+    if (!modalImage || !galleryImages[currentModalIndex]) return;
+    const imgData = galleryImages[currentModalIndex];
+    loadImageWithCheck(modalImage, imgData.src, imgData.alt);
+    
+    // restart animation
+    modalImage.style.animation = 'none';
+    modalImage.offsetHeight;
+    modalImage.style.animation = 'fadeScale 0.2s ease';
+  }
+
+  function nextImage() {
+    if (!galleryImages.length) return;
+    currentModalIndex = (currentModalIndex + 1) % galleryImages.length;
+    updateModalImage();
+  }
+
+  function prevImage() {
+    if (!galleryImages.length) return;
+    currentModalIndex = (currentModalIndex - 1 + galleryImages.length) % galleryImages.length;
+    updateModalImage();
+  }
+
+  function closeModal() {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  // ---------- PASSWORD VALIDATION & GALLERY UNLOCK ----------
+  function unlockGallery() {
+    const enteredPassword = passwordInput.value;
+    if (enteredPassword === CORRECT_PASSWORD) {
+      if (!isImagesLoaded) {
+        errorMsgSpan.textContent = '⚠️ Images are still loading. Please wait...';
+        return;
+      }
+      
+      if (galleryImages.length === 0) {
+        errorMsgSpan.textContent = '⚠️ No images available to display. Check gallery.json file.';
+        return;
+      }
+      
+      // Hide password screen with smooth fade and show gallery
+      passwordScreenDiv.style.opacity = '0';
+      setTimeout(() => {
+        passwordScreenDiv.style.display = 'none';
+        galleryAppDiv.style.display = 'flex';
+        setTimeout(() => {
+          galleryAppDiv.style.opacity = '1';
+        }, 20);
+      }, 300);
+      errorMsgSpan.textContent = '';
+      
+    } else {
+      errorMsgSpan.textContent = '⛔ access denied · wrong password';
+      passwordInput.value = '';
+      passwordInput.focus();
+      // subtle shake effect
+      const card = document.querySelector('.password-card');
+      if (card) {
+        card.style.transform = 'translateX(4px)';
+        setTimeout(() => { if(card) card.style.transform = ''; }, 100);
+      }
+    }
+  }
+
+  function handlePasswordKeypress(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      unlockGallery();
+    }
+  }
+
+  // ---------- MODAL EVENT BINDINGS ----------
+  function bindModalEvents() {
+    if (prevBtn) prevBtn.addEventListener('click', (e) => { e.stopPropagation(); prevImage(); });
+    if (nextBtn) nextBtn.addEventListener('click', (e) => { e.stopPropagation(); nextImage(); });
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+    
+    // Close modal when clicking on background overlay
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+    
+    // Keyboard controls
+    window.addEventListener('keydown', (e) => {
+      if (!modal.classList.contains('active')) return;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        prevImage();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        nextImage();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+      }
+    });
+  }
+
+  // ---------- INITIALIZE APP ----------
+  async function initializeApp() {
+    // Bind modal events
+    bindModalEvents();
+    
+    // Initially gallery is hidden, password screen visible
+    passwordScreenDiv.style.display = 'flex';
+    galleryAppDiv.style.display = 'none';
+    galleryAppDiv.style.opacity = '0';
+    
+    // Add password events
+    unlockBtn.addEventListener('click', unlockGallery);
+    passwordInput.addEventListener('keypress', handlePasswordKeypress);
+    passwordInput.focus();
+    
+    // Fetch images from gallery.json
+    const fetchSuccess = await fetchGalleryImages();
+    
+    if (fetchSuccess && galleryImages.length > 0) {
+      renderGallery();
+      console.log('Gallery ready! Enter password to view images from local folder.');
+    }
+  }
+
+  // Start the application
+  initializeApp();
+</script>
+     <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(function(registration) {
+            console.log('ServiceWorker registered successfully');
+          }, function(err) {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
